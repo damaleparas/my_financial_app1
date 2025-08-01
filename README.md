@@ -4,11 +4,11 @@ A Django-based financial application with machine learning integration for finan
 
 ## Features
 
-- 📊 Financial data analysis and visualization
+- 📊 Financial data analysis 
 - 🤖 Machine learning-powered financial predictions
-- 📈 Real-time market data integration
+- 📈 market data integration
 - 🎯 User-friendly web interface
-- 📉 Advanced charting and analytics
+- 📉 Advanced  analytics
 
 ## Project Structure
 
