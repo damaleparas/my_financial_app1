@@ -1,0 +1,189 @@
+<!-- templates/financial_ml/index.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Risk Prediction System</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; line-height: 1.6; }
+        .container { background-color: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 900px; margin: 30px auto; }
+        h1, h2 { color: #2c3e50; margin-bottom: 15px; }
+        h1 { text-align: center; font-size: 2.5em; }
+        h2 { font-size: 1.8em; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; }
+        .section { margin-bottom: 30px; padding-bottom: 20px; }
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-right: 15px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover { background-color: #2980b9; }
+        input[type="file"] { margin-top: 15px; margin-bottom: 10px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        form { margin-top: 15px; }
+        .result-box {
+            background-color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', Courier, monospace;
+            border: 1px solid #bdc3c7;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+        }
+        .error-message { color: #e74c3c; font-weight: bold; }
+        .success-message { color: #27ae60; font-weight: bold; }
+        .loading-message { color: #f39c12; font-weight: bold; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏦 Financial Risk Prediction System</h1>
+        <p>This system allows you to train a machine learning model for financial risk prediction and make predictions based on balance sheet data.</p>
+
+        <div class="section">
+            <h2>📊 Model Training</h2>
+            <p>Choose an option to train the investment risk prediction model:</p>
+            <button onclick="trainModel('sample')">Train with Sample Data</button>
+            
+            <form id="customTrainForm" enctype="multipart/form-data">
+                <label for="customCsvFile">Upload Custom Training CSV:</label>
+                <input type="file" id="customCsvFile" name="csv_file" accept=".csv">
+                <button type="submit">Train with Custom Data</button>
+            </form>
+            <div id="trainStatus" class="result-box"></div>
+        </div>
+
+        <div class="section">
+            <h2>🔮 Make Prediction</h2>
+            <p>Upload a balance sheet CSV file to get a risk prediction:</p>
+            <form id="predictForm" enctype="multipart/form-data">
+                <label for="balanceSheetFile">Upload Balance Sheet CSV:</label>
+                <input type="file" id="balanceSheetFile" name="balance_sheet_file" accept=".csv">
+                <button type="submit">Get Prediction</button>
+            </form>
+            <div id="predictionResult" class="result-box"></div>
+        </div>
+
+        <div class="section">
+            <h2>🧪 Test Prediction</h2>
+            <p>Test the prediction system with a hardcoded sample input vector:</p>
+            <button onclick="testPrediction()">Test with Sample Data</button>
+            <div id="testPredictionResult" class="result-box"></div>
+        </div>
+    </div>
+
+    <script>
+        async function trainModel(type) {
+            const trainStatusDiv = document.getElementById('trainStatus');
+            trainStatusDiv.innerHTML = '<span class="loading-message">Training model... Please wait. This might take a moment.</span>';
+            trainStatusDiv.className = 'result-box';
+
+            let formData = new FormData();
+            formData.append('train_type', type);
+
+            if (type === 'custom') {
+                const customCsvFile = document.getElementById('customCsvFile').files[0];
+                if (!customCsvFile) {
+                    trainStatusDiv.innerHTML = '<span class="error-message">Please select a CSV file for custom training.</span>';
+                    return;
+                }
+                formData.append('csv_file', customCsvFile);
+            }
+
+            try {
+                const response = await fetch('/api/train/', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.status === 'success') {
+                    trainStatusDiv.innerHTML = `<span class="success-message">${data.message}</span>`;
+                } else {
+                    trainStatusDiv.innerHTML = `<span class="error-message">Error: ${data.message}</span>`;
+                }
+            } catch (error) {
+                trainStatusDiv.innerHTML = `<span class="error-message">Network error: ${error.message}. Check server console for details.</span>`;
+            }
+        }
+
+        document.getElementById('customTrainForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent default form submission
+            trainModel('custom');
+        });
+
+        async function getPrediction() {
+            const predictionResultDiv = document.getElementById('predictionResult');
+            predictionResultDiv.innerHTML = '<span class="loading-message">Making prediction... Please wait.</span>';
+            predictionResultDiv.className = 'result-box';
+
+            const balanceSheetFile = document.getElementById('balanceSheetFile').files[0];
+            if (!balanceSheetFile) {
+                predictionResultDiv.innerHTML = '<span class="error-message">Please select a balance sheet CSV file.</span>';
+                return;
+            }
+
+            let formData = new FormData();
+            formData.append('balance_sheet_file', balanceSheetFile);
+
+            try {
+                const response = await fetch('/api/predict/', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.status === 'success') {
+                    const result = data.data;
+                    predictionResultDiv.innerHTML = `
+                        <span class="success-message">Prediction Results:</span><br>
+                        Risk Category: <strong>${result.risk_category}</strong><br>
+                        Confidence: ${result.confidence}<br>
+                        Input Vector Length: ${result.input_vector_length}
+                    `;
+                } else {
+                    predictionResultDiv.innerHTML = `<span class="error-message">Error: ${data.message}</span>`;
+                }
+            } catch (error) {
+                predictionResultDiv.innerHTML = `<span class="error-message">Network error: ${error.message}. Check server console for details.</span>`;
+            }
+        }
+
+        document.getElementById('predictForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent default form submission
+            getPrediction();
+        });
+
+        async function testPrediction() {
+            const testPredictionResultDiv = document.getElementById('testPredictionResult');
+            testPredictionResultDiv.innerHTML = '<span class="loading-message">Testing prediction...</span>';
+            testPredictionResultDiv.className = 'result-box';
+
+            try {
+                const response = await fetch('/api/test_prediction/');
+                const data = await response.json();
+                if (data.status === 'success') {
+                    const result = data.data;
+                    testPredictionResultDiv.innerHTML = `
+                        <span class="success-message">Test Prediction Results:</span><br>
+                        Risk Category: <strong>${result.risk_category}</strong><br>
+                        Confidence: ${result.confidence}
+                    `;
+                } else {
+                    testPredictionResultDiv.innerHTML = `<span class="error-message">Error: ${data.message}</span>`;
+                }
+            } catch (error) {
+                testPredictionResultDiv.innerHTML = `<span class="error-message">Network error: ${error.message}. Check server console for details.</span>`;
+            }
+        }
+    </script>
+</body>
+</html>
